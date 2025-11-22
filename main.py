@@ -1,109 +1,124 @@
 import pandas as pd
-import os
-import shutil
+import streamlit as st
 from datetime import datetime
+import os
+import random
 
-# Excel dosya adı
-excel_dosya = "gecmis_log.xlsx"
+# ----------------------
+# CONFIG
+# ----------------------
+st.set_page_config(page_title="Ruh Hali Önerici", page_icon="🎵", layout="centered")
 
-# Eğer eski log varsa yedekle ve temiz bir log oluştur
-if os.path.exists(excel_dosya):
-    # yedek dosya adı: gecmis_log_backup_YYYYMMDD_HHMMSS.xlsx
-    yedek_adi = f"gecmis_log_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    try:
-        shutil.move(excel_dosya, yedek_adi)
-        print(f"Eski log dosyası yedeklendi -> {yedek_adi}")
-    except Exception as e:
-        print(f"Uyarı: eski log dosyası yedeklenirken hata: {e}")
+DATA_FILE = "gecmis_log.xlsx"
+
+# ----------------------
+# TEMALAR
+# ----------------------
+tema = st.sidebar.radio("Tema Seçimi", ["Açık", "Koyu"])
+if tema == "Koyu":
+    st.markdown(
+        """
+        <style>
+        .css-18e3th9 {background-color: #333333;}
+        .css-1d391kg {color: #FFFFFF;}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+# ----------------------
+# KULLANICI GİRİŞİ
+# ----------------------
+st.title("🎵 Ruh Hali Önerici")
+username = st.text_input("Kullanıcı Adı:", "")
+
+# ----------------------
+# ÖNERİLER
+# ----------------------
+varsayılan_ruh_halleri = {
+    "Mutlu": {"müzik": ["Happy - Pharrell", "Walking on Sunshine - Katrina"], "aktivite": ["Dans etmek", "Arkadaşlarla buluşmak"], "mesaj": "Harika gidiyorsun! 😄"},
+    "Üzgün": {"müzik": ["Someone Like You - Adele", "Fix You - Coldplay"], "aktivite": ["Günlük yazmak", "Sessiz bir yürüyüş"], "mesaj": "Her şey geçecek, güç sende! 💛"},
+    "Stresli": {"müzik": ["Weightless - Marconi", "Clair de Lune - Debussy"], "aktivite": ["Meditasyon yapmak", "Derin nefes egzersizi"], "mesaj": "Sakin ol ve nefes al 🧘‍♂️"},
+    "Yorgun": {"müzik": ["Stay With Me - Sam Smith", "Someone You Loved - Lewis Capaldi"], "aktivite": ["Kısa bir şekerleme", "Bitki çayı içmek"], "mesaj": "Kendine zaman ayır 🌿"},
+    "Heyecanlı": {"müzik": ["Can't Stop the Feeling - Justin", "Uptown Funk - Bruno Mars"], "aktivite": ["Yeni bir proje başlat", "Spor yapmak"], "mesaj": "Enerjini iyi kullan! ⚡"},
+    "Sakin": {"müzik": ["River Flows In You - Yiruma", "Gymnopédie - Satie"], "aktivite": ["Kitap okumak", "Doğa yürüyüşü"], "mesaj": "Huzurun tadını çıkar 🌸"},
+    "Motivasyonlu": {"müzik": ["Eye of the Tiger - Survivor", "Stronger - Kanye"], "aktivite": ["Plan yap", "Hedef belirle"], "mesaj": "Devam et, harika işler başarabilirsin 💪"},
+    "Kızgın": {"müzik": ["Break Stuff - Limp Bizkit", "You Oughta Know - Alanis"], "aktivite": ["Spor yapmak", "Sessizce yazmak"], "mesaj": "Sakin ol, nefes al ve devam et 😤"},
+    "Endişeli": {"müzik": ["Breathe Me - Sia", "Comfortably Numb - Pink Floyd"], "aktivite": ["Günlük yazmak", "Müzik dinlemek"], "mesaj": "Her şey yoluna girecek, güven 😊"}
+}
+
+# ----------------------
+# VERİ YÜKLEME
+# ----------------------
+if os.path.exists(DATA_FILE):
+    df = pd.read_excel(DATA_FILE)
 else:
-    print("Eski log dosyası bulunamadı — yeni temiz log oluşturulacak.")
+    df = pd.DataFrame(columns=["Tarih", "Kullanıcı", "Ruh Hali", "Müzik", "Aktivite", "Mesaj"])
+    df.to_excel(DATA_FILE, index=False)
 
-# Şimdi temiz DataFrame oluştur (boş log)
-df = pd.DataFrame(columns=["tarih", "ruh_hali", "müzik", "aktivite", "mesaj"])
+# ----------------------
+# YENİ RUH HALİ EKLEME
+# ----------------------
+st.sidebar.subheader("Yeni Ruh Hali Ekle")
+yeni_ruh = st.sidebar.text_input("Ruh Hali İsmi")
+yeni_muzik = st.sidebar.text_input("Önerilen Müzik (virgülle ayır)")
+yeni_aktivite = st.sidebar.text_input("Önerilen Aktivite (virgülle ayır)")
+yeni_mesaj = st.sidebar.text_input("Motivasyon Mesajı")
 
-# (Aşağıya mevcut programının geri kalanını ekle)
-# Örneğin: ruh halı sözlükleri, kullanıcı etkileşimi ve kayıt kodu...
-# Buraya mevcut kodunu yapıştırabilirsin; örnek devam aşağıdaki gibidir:
+if st.sidebar.button("Ekle"):
+    if yeni_ruh and yeni_muzik and yeni_aktivite and yeni_mesaj:
+        varsayılan_ruh_halleri[yeni_ruh] = {
+            "müzik": [m.strip() for m in yeni_muzik.split(",")],
+            "aktivite": [a.strip() for a in yeni_aktivite.split(",")],
+            "mesaj": yeni_mesaj
+        }
+        st.sidebar.success(f"{yeni_ruh} ruh hali eklendi!")
+    else:
+        st.sidebar.error("Lütfen tüm alanları doldurunuz!")
 
-# örnek basit veri (kendi mevcut kodunu buraya taşı)
-ruh_emoji = {
-    "mutlu": "😊",
-    "üzgün": "😢",
-    "stresli": "😰",
-    "yorgun": "😴",
-    "heyecanlı": "🤩",
-    "sakin": "🧘",
-    "motivasyonlu": "💪",
-    "kızgın": "😡",
-    "endişeli": "😟"
-}
+# ----------------------
+# RUH HALİ SEÇİMİ
+# ----------------------
+st.subheader("Ruh Halinizi Seçin")
+ruh_hali = st.selectbox("Ruh Hali", list(varsayılan_ruh_halleri.keys()))
 
-oneri_muzik = {
-    "mutlu": "Happy - Pharrell Williams",
-    "üzgün": "Fix You - Coldplay",
-    "stresli": "Weightless - Marconi Union",
-    "yorgun": "Lovely - Billie Eilish",
-    "heyecanlı": "Can't Hold Us - Macklemore",
-    "sakin": "Weightless - Marconi Union",
-    "motivasyonlu": "Stronger - Kanye West",
-    "kızgın": "Let It Be - Beatles",
-    "endişeli": "Breathe Me - Sia"
-}
+if st.button("Öneri Getir"):
+    secilen = varsayılan_ruh_halleri[ruh_hali]
+    muzik = random.choice(secilen["müzik"])
+    aktivite = random.choice(secilen["aktivite"])
+    mesaj = secilen["mesaj"]
 
-oneri_aktivite = {
-    "mutlu": "Müzik aç ve dans et",
-    "üzgün": "Yürüyüş yapmak",
-    "stresli": "Nefes egzersizi",
-    "yorgun": "Biraz dinlenmek",
-    "heyecanlı": "Hedeflerini yazmak",
-    "sakin": "Meditasyon yapmak",
-    "motivasyonlu": "Hedeflerini gözden geçirmek",
-    "kızgın": "Derin nefes egzersizi",
-    "endişeli": "Günlük yazmak"
-}
+    st.markdown(f"**Ruh Haliniz:** {ruh_hali}")
+    st.markdown(f"**Önerilen Müzik:** {muzik}")
+    st.markdown(f"**Önerilen Aktivite:** {aktivite}")
+    st.markdown(f"**Motivasyon Mesajı:** {mesaj}")
 
-motivasyon_mesaji = {
-    "mutlu": "Bu enerjiyle her şey daha güzel olacak! ✨",
-    "üzgün": "Her şey daha iyi olacak, biraz sabret 💪",
-    "stresli": "Derin bir nefes al, her şey kontrol altında 🌿",
-    "yorgun": "Kendine zaman ver, dinlenmeyi hak ediyorsun 🛌",
-    "heyecanlı": "Bu heyecan seni ileri taşıyacak! ⚡",
-    "sakin": "Ruhunu dinlendir, huzur seninle 🌿",
-    "motivasyonlu": "Şimdi harekete geçme zamanı! 💥",
-    "kızgın": "Sakin ol, nefes al ve devam et 😤",
-    "endişeli": "Her şey yoluna girecek, güven 😊"
-}
+    # ----------------------
+    # VERİ KAYDETME
+    # ----------------------
+    if username:
+        yeni_satir = {
+            "Tarih": datetime.now(),
+            "Kullanıcı": username,
+            "Ruh Hali": ruh_hali,
+            "Müzik": muzik,
+            "Aktivite": aktivite,
+            "Mesaj": mesaj
+        }
+        df = pd.concat([df, pd.DataFrame([yeni_satir])], ignore_index=True)
+        df.to_excel(DATA_FILE, index=False)
+        st.success("Öneri kaydedildi! ✅")
 
-# Basit etkileşim döngüsü (kendi detaylarını buraya geri taşı)
-while True:
-    kullanici_ruh = input("Ruh halinizi girin (Mutlu, Üzgün, Stresli, Yorgun, Heyecanlı, Sakin, Motivasyonlu, Kızgın, Endişeli): ").lower()
-    if kullanici_ruh not in oneri_muzik:
-        print("Geçersiz ruh hali! Lütfen doğru bir ruh hali yazın.")
-        continue
-
-    muzik = oneri_muzik[kullanici_ruh]
-    aktivite = oneri_aktivite[kullanici_ruh]
-    mesaj = motivasyon_mesaji[kullanici_ruh]
-
-    print(f"\nRuh Haliniz: {kullanici_ruh.capitalize()} {ruh_emoji[kullanici_ruh]}")
-    print(f"Önerilen Müzik: {muzik}")
-    print(f"Önerilen Aktivite: {aktivite}")
-    print(f"Motivasyon Mesajı: {mesaj}\n")
-
-    # Excel'e ekle
-    yeni_satir = pd.DataFrame({
-        "tarih": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
-        "ruh_hali": [kullanici_ruh],
-        "müzik": [muzik],
-        "aktivite": [aktivite],
-        "mesaj": [mesaj]
-    })
-    df = pd.concat([df, yeni_satir], ignore_index=True)
-    df.to_excel(excel_dosya, index=False)
-
-    print("✔ Öneri kaydedildi (yeni temiz gecmis_log.xlsx).\n")
-
-    devam = input("Başka bir ruh hali denemek ister misiniz? (E/H): ").lower()
-    if devam != "e":
-        print("Programdan çıkılıyor. Hoşça kal!")
-        break
+# ----------------------
+# GRAFİKSEL GÖRSELLEŞTİRME
+# ----------------------
+st.subheader("Ruh Hali Geçmişi Grafiği")
+if username:
+    user_df = df[df["Kullanıcı"] == username]
+    if not user_df.empty:
+        grafik = user_df["Ruh Hali"].value_counts()
+        st.bar_chart(grafik)
+    else:
+        st.info("Henüz veri yok, öneri alınca grafik görünecek.")
+else:
+    st.info("Grafik için kullanıcı adınızı girin.")
